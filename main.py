@@ -1,9 +1,10 @@
 import pandas as pd
-import plotly.express as px
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.cluster import KMeans
+from sklearn.metrics import accuracy_score
+import plotly.express as px
 from sklearn.decomposition import PCA
 
 # Carregando o conjunto de dados Iris
@@ -12,42 +13,33 @@ iris_df = pd.DataFrame(data=iris.data, columns=iris.feature_names)
 iris_df['target'] = iris.target
 iris_df['species'] = iris.target_names[iris.target]
 
-# Dividindo o conjunto de dados em treino e teste
 X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, test_size=0.2, random_state=42)
 
-# Criando e treinando um classificador k-NN
 knn = KNeighborsClassifier(n_neighbors=3)
 knn.fit(X_train, y_train)
 
+y_pred_knn = knn.predict(X_test)
 
-y_pred = knn.predict(X_test)
+# Avaliando a precisão do modelo k-NN
+accuracy_knn = accuracy_score(y_test, y_pred_knn)
+print(f'Acurácia do modelo k-NN: {accuracy_knn:.2f}')
 
+# Usando k-Means para clustering
+kmeans = KMeans(n_clusters=3, random_state=42)
+iris_df['cluster'] = kmeans.fit_predict(iris.data)
 
-iris_df['predictions'] = knn.predict(iris.data)
+# Reduzindo a dimensionalidade para visualização
+pca = PCA(n_components=2)
+iris_2d = pca.fit_transform(iris.data)
 
+# Adicionando os resultados do clustering ao DataFrame
+iris_df['PCA1'] = iris_2d[:, 0]
+iris_df['PCA2'] = iris_2d[:, 1]
 
-accuracy = accuracy_score(y_test, y_pred)
-print(f'Acurácia do modelo: {accuracy:.2f}')
-
-conf_matrix = confusion_matrix(y_test, y_pred)
-class_report = classification_report(y_test, y_pred, target_names=iris.target_names)
-
-print('Matriz de Confusão:')
-print(conf_matrix)
-print('\nRelatório de Classificação:')
-print(class_report)
-
-pca = PCA(n_components=3)
-iris_3d = pca.fit_transform(iris.data)
-
-
-iris_df['PCA1'] = iris_3d[:, 0]
-iris_df['PCA2'] = iris_3d[:, 1]
-iris_df['PCA3'] = iris_3d[:, 2]
-
-
-fig = px.scatter_3d(iris_df, x='PCA1', y='PCA2', z='PCA3', color='predictions', symbol='species',
-                    size_max=10, opacity=0.7, title='Previsões do Modelo k-NN - Iris Dataset')
+# Criando um gráfico interativo com Plotly para visualizar os clusters
+fig = px.scatter(iris_df, x='PCA1', y='PCA2', color='cluster', symbol='species',
+                 title='k-Means Clustering (2D Projection with PCA)',
+                 labels={'cluster': 'Cluster', 'species': 'Species'})
 
 # Exibindo o gráfico
 fig.show()
